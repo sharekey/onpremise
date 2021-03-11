@@ -162,7 +162,14 @@ fi
 echo "${_endgroup}"
 
 echo "${_group}Creating volumes for persistent storage ..."
-echo "Created $(docker volume create --name=sentry-data)."
+echo "Created $(docker volume create --name=sentry-web-data)."
+echo "Created $(docker volume create --name=sentry-cron-data)."
+echo "Created $(docker volume create --name=sentry-worker-data)."
+echo "Created $(docker volume create --name=sentry-ingest-consumer-data)."
+echo "Created $(docker volume create --name=sentry-post-process-forwarder-data)."
+echo "Created $(docker volume create --name=sentry-subscription-consumer-events-data)."
+echo "Created $(docker volume create --name=sentry-subscription-consumer-transactions-data)."
+echo "Created $(docker volume create --name=sentry-sentry-cleanup-data)."
 echo "Created $(docker volume create --name=sentry-postgres)."
 echo "Created $(docker volume create --name=sentry-redis)."
 echo "Created $(docker volume create --name=sentry-zookeeper)."
@@ -334,13 +341,63 @@ fi
 echo "${_endgroup}"
 
 echo "${_group}Migrating file storage ..."
-SENTRY_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
-if [[ -n "$SENTRY_DATA_NEEDS_MIGRATION" ]]; then
+SENTRY_WEB_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-web-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
+SENTRY_CRON_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-cron-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
+SENTRY_WORKER_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-worker-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
+SENTRY_INGEST_CONSUMER_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-ingest-consumer-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
+SENTRY_POST_PROCESS_FORWARDER_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-post-process-forwarder-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
+SENTRY_SUBSCRIPTION_CONSUMER_EVENTS_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-subscription-consumer-events-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
+SENTRY_SUBSCRIPTION_CONSUMER_TRANSACTIONS_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-subscription-consumer-transactions-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
+SENTRY_SENTRY_CLEANUP_DATA_NEEDS_MIGRATION=$(docker run --rm -v sentry-sentry-cleanup-data:/data alpine ash -c "[ ! -d '/data/files' ] && ls -A1x /data | wc -l || true")
+if [[ -n "$SENTRY_WEB_DATA_NEEDS_MIGRATION" ]]; then
   # Use the web (Sentry) image so the file owners are kept as sentry:sentry
   # The `\"` escape pattern is to make this compatible w/ Git Bash on Windows. See #329.
   $dcr --entrypoint \"/bin/bash\" web -c \
     "mkdir -p /tmp/files; mv /data/* /tmp/files/; mv /tmp/files /data/files; chown -R sentry:sentry /data"
 fi
+if [[ -n "$SENTRY_CRON_DATA_NEEDS_MIGRATION" ]]; then
+  # Use the worker (Sentry) image so the file owners are kept as sentry:sentry
+  # The `\"` escape pattern is to make this compatible w/ Git Bash on Windows. See #329.
+  $dcr --entrypoint \"/bin/bash\" cron -c \
+    "mkdir -p /tmp/files; mv /data/* /tmp/files/; mv /tmp/files /data/files; chown -R sentry:sentry /data"
+fi
+if [[ -n "$SENTRY_WORKER_DATA_NEEDS_MIGRATION" ]]; then
+  # Use the worker (Sentry) image so the file owners are kept as sentry:sentry
+  # The `\"` escape pattern is to make this compatible w/ Git Bash on Windows. See #329.
+  $dcr --entrypoint \"/bin/bash\" worker -c \
+    "mkdir -p /tmp/files; mv /data/* /tmp/files/; mv /tmp/files /data/files; chown -R sentry:sentry /data"
+fi
+if [[ -n "$SENTRY_INGEST_CONSUMER_DATA_NEEDS_MIGRATION" ]]; then
+  # Use the worker (Sentry) image so the file owners are kept as sentry:sentry
+  # The `\"` escape pattern is to make this compatible w/ Git Bash on Windows. See #329.
+  $dcr --entrypoint \"/bin/bash\" ingest-consumer -c \
+    "mkdir -p /tmp/files; mv /data/* /tmp/files/; mv /tmp/files /data/files; chown -R sentry:sentry /data"
+fi
+if [[ -n "$SENTRY_POST_PROCESS_FORWARDER_DATA_NEEDS_MIGRATION" ]]; then
+  # Use the worker (Sentry) image so the file owners are kept as sentry:sentry
+  # The `\"` escape pattern is to make this compatible w/ Git Bash on Windows. See #329.
+  $dcr --entrypoint \"/bin/bash\" post-process-forwarder -c \
+    "mkdir -p /tmp/files; mv /data/* /tmp/files/; mv /tmp/files /data/files; chown -R sentry:sentry /data"
+fi
+if [[ -n "$SENTRY_SUBSCRIPTION_CONSUMER_EVENTS_DATA_NEEDS_MIGRATION" ]]; then
+  # Use the worker (Sentry) image so the file owners are kept as sentry:sentry
+  # The `\"` escape pattern is to make this compatible w/ Git Bash on Windows. See #329.
+  $dcr --entrypoint \"/bin/bash\" subscription-consumer-events -c \
+    "mkdir -p /tmp/files; mv /data/* /tmp/files/; mv /tmp/files /data/files; chown -R sentry:sentry /data"
+fi
+if [[ -n "$SENTRY_SUBSCRIPTION_CONSUMER_TRANSACTIONS_DATA_NEEDS_MIGRATION" ]]; then
+  # Use the worker (Sentry) image so the file owners are kept as sentry:sentry
+  # The `\"` escape pattern is to make this compatible w/ Git Bash on Windows. See #329.
+  $dcr --entrypoint \"/bin/bash\" subscription-consumer-transactions -c \
+    "mkdir -p /tmp/files; mv /data/* /tmp/files/; mv /tmp/files /data/files; chown -R sentry:sentry /data"
+fi
+if [[ -n "$SENTRY_SENTRY_CLEANUP_DATA_NEEDS_MIGRATION" ]]; then
+  # Use the worker (Sentry) image so the file owners are kept as sentry:sentry
+  # The `\"` escape pattern is to make this compatible w/ Git Bash on Windows. See #329.
+  $dcr --entrypoint \"/bin/bash\" sentry-cleanup -c \
+    "mkdir -p /tmp/files; mv /data/* /tmp/files/; mv /tmp/files /data/files; chown -R sentry:sentry /data"
+fi
+
 echo "${_endgroup}"
 
 echo "${_group}Generating Relay credentials ..."

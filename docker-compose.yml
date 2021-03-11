@@ -29,9 +29,7 @@ x-sentry-defaults: &sentry_defaults
     # on the host system (or in the .env file)
     SENTRY_EVENT_RETENTION_DAYS:
   volumes:
-    - "sentry-data:/data"
-    - "./sentry:/etc/sentry"
-    - "./geoip:/geoip:ro"
+
 x-snuba-defaults: &snuba_defaults
   <<: *restart_policy
   depends_on:
@@ -195,25 +193,53 @@ services:
       - "sentry-symbolicator:/data"
   web:
     <<: *sentry_defaults
+    volumes:
+      - "./sentry:/etc/sentry"
+      - "./geoip:/geoip:ro"
+      - "sentry-web-data:/data"
   cron:
     <<: *sentry_defaults
     command: run cron
+    volumes:
+      - "./sentry:/etc/sentry"
+      - "./geoip:/geoip:ro"
+      - "sentry-cron-data:/data"
   worker:
     <<: *sentry_defaults
     command: run worker
+    volumes:
+      - "./sentry:/etc/sentry"
+      - "./geoip:/geoip:ro"
+      - "sentry-worker-data:/data"
   ingest-consumer:
     <<: *sentry_defaults
     command: run ingest-consumer --all-consumer-types
+    volumes:
+      - "./sentry:/etc/sentry"
+      - "./geoip:/geoip:ro"
+      - "sentry-ingest-consumer-data:/data"
   post-process-forwarder:
     <<: *sentry_defaults
     # Increase `--commit-batch-size 1` below to deal with high-load environments.
     command: run post-process-forwarder --commit-batch-size 1
+    volumes:
+      - "./sentry:/etc/sentry"
+      - "./geoip:/geoip:ro"
+      - "sentry-post-process-forwarder-data:/data"
   subscription-consumer-events:
     <<: *sentry_defaults
     command: run query-subscription-consumer --commit-batch-size 1 --topic events-subscription-results
+    volumes:
+      - "./sentry:/etc/sentry"
+      - "./geoip:/geoip:ro"
+      - "sentry-subscription-consumer-events-data:/data"
   subscription-consumer-transactions:
     <<: *sentry_defaults
     command: run query-subscription-consumer --commit-batch-size 1 --topic transactions-subscription-results
+    volumes:
+      - "./sentry:/etc/sentry"
+      - "./geoip:/geoip:ro"
+      - "sentry-subscription-consumer-transactions-data:/data"
   sentry-cleanup:
     <<: *sentry_defaults
     image: sentry-cleanup-onpremise-local
@@ -223,6 +249,10 @@ services:
         BASE_IMAGE: "$SENTRY_IMAGE"
     entrypoint: "/entrypoint.sh"
     command: '"0 0 * * * gosu sentry sentry cleanup --days $SENTRY_EVENT_RETENTION_DAYS"'
+    volumes:
+      - "./sentry:/etc/sentry"
+      - "./geoip:/geoip:ro"
+      - "sentry-sentry-cleanup-data:/data"
   nginx:
     <<: *restart_policy
     ports:
@@ -252,7 +282,21 @@ services:
       - kafka
       - redis
 volumes:
-  sentry-data:
+  sentry-web-data:
+    external: true
+  sentry-cron-data:
+    external: true
+  sentry-worker-data:
+    external: true
+  sentry-ingest-consumer-data:
+    external: true
+  sentry-post-process-forwarder-data:
+    external: true
+  sentry-subscription-consumer-events-data:
+    external: true
+  sentry-subscription-consumer-transactions-data:
+    external: true
+  sentry-sentry-cleanup-data:
     external: true
   sentry-postgres:
     external: true
